@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "sys/time.h"
+#include "mpi.h"
 
 #define MATRIX_SIZE 8
+
+int err, numberOfProcess, processRank;
 
 void printMatrix(int matrix[MATRIX_SIZE][MATRIX_SIZE])
 {
@@ -29,45 +32,18 @@ void initalizeMatrix(int p, int matrix[MATRIX_SIZE][MATRIX_SIZE])
 	}
 }
 
-void problemeUn(int matrix[MATRIX_SIZE][MATRIX_SIZE], int nbIterations, int k)
-{	
-	for(int i = 0; i < MATRIX_SIZE; i++)
+void problemeUn(int matrix[MATRIX_SIZE][MATRIX_SIZE], int nbIterations)
+{
+	if (processRank == 0)
 	{
-		for(int j = 0; j < MATRIX_SIZE; j++)
-		{
-			usleep(1000);
-			matrix[i][j] += (i + j) * k;			
-		} 
-	} 
-	
-	if (k < nbIterations)
-	{
-		problemeUn(matrix, nbIterations, ++k);
-	} 	
-}
-
-void problemeDeux(int matrix[MATRIX_SIZE][MATRIX_SIZE], int nbIterations, int k)
-{	
-	for(int i = 0; i < MATRIX_SIZE; i++)
-	{
-		usleep(1000); 
-		matrix[i][0] += (i * k);
+		matrix[0][0] = nbIterations;
 		
-	} 
-	
-	for(int i = 0; i < MATRIX_SIZE; i++)
+		printMatrix(matrix);
+	}
+	else
 	{
-		for(int j = 1; j < MATRIX_SIZE; j++)
-		{
-			usleep(1000);
-			matrix[i][j] += matrix[i][j - 1] * k;			
-		} 
-	} 
-	
-	if (k < nbIterations)
-	{
-		problemeDeux(matrix, nbIterations, ++k);
-	} 	
+
+	}
 }
 
 int main(int argc, char *argv[])
@@ -77,37 +53,50 @@ int main(int argc, char *argv[])
 		printf("Nombre de parametres invalides");
 		return 0;
 	}
-	
+
 	int initialValue = atoi(argv[2]);
 	int problem = atoi(argv[1]);
 	int nbIterations = atoi(argv[3]);
 	int matrix[MATRIX_SIZE][MATRIX_SIZE];
-	
+
 	initalizeMatrix(initialValue, matrix);
 	
+	err = MPI_Init(&argc, &argv);
+
+	if (err != MPI_SUCCESS)
+	{
+		printf("Erreur d'initialisation de MPI");
+    	return 0;
+	}
+
+	MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcess);
+	MPI_Comm_rank(MPI_COMM_WORLD, &processRank);
+
 	//Tiré de l'exemple du site du cours pour le minuteur
 	double timeStart, timeEnd, executionTime;
 	struct timeval tp;
 	gettimeofday(&tp, NULL); 
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
-	
-    if (problem == 1)
+
+	if (problem == 1)
 	{
-		printf("Execution du premier probleme\n");
-		problemeUn(matrix, nbIterations, 1);
+		problemeUn(matrix, nbIterations);
 	}
 	else
 	{
 		printf("Execution du deuxieme probleme\n");
-		problemeDeux(matrix, nbIterations, 1);
 	} 
-	
+
 	gettimeofday(&tp, NULL);
 	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 	executionTime = timeEnd - timeStart;
 	
-	printMatrix(matrix);
-	printf("Execution time: %f\n", executionTime);
+	if (processRank == 0)
+	{
+		printf("Execution time: %f\n", executionTime);
+	}
+
+	err = MPI_Finalize();
 	
     return 0;
 } 
