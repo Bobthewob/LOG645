@@ -52,8 +52,7 @@ void problemeDeux(int matrix[MATRIX_SIZE][MATRIX_SIZE], int nbIterations, int k)
 	for(int i = 0; i < MATRIX_SIZE; i++)
 	{
 		usleep(1000); 
-		matrix[i][0] += (i * k);
-		
+		matrix[i][0] += (i * k);		
 	} 
 	
 	for(int i = 0; i < MATRIX_SIZE; i++)
@@ -94,12 +93,10 @@ int main(int argc, char *argv[])
 	
     if (problem == 1)
 	{
-		//printf("Execution du premier probleme\n");
 		problemeUn(matrix, nbIterations, 1);
 	}
 	else
 	{
-		//printf("Execution du deuxieme probleme\n");
 		problemeDeux(matrix, nbIterations, 1);
 	} 
 	
