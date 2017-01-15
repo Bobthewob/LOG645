@@ -25,9 +25,8 @@ void printMatrix(int matrix[MATRIX_SIZE][MATRIX_SIZE])
 
 void aggregateAndPrintValues(int currentValue, int i, int j)
 {
-	if(processRank == 0) //processeur considerer comme le serveur , va recevoir les donnees des autres processeurs et creer la matrice
-	{
-		
+	if(processRank == 0) //processeur consideré comme le serveur , va recevoir les données des autres processeurs et créer la matrice
+	{		
 		int buffToRecv[3];
 		int matrix[MATRIX_SIZE][MATRIX_SIZE];
 		int nbOfRecvValue = 0;
@@ -37,9 +36,9 @@ void aggregateAndPrintValues(int currentValue, int i, int j)
 
 		while(nbOfRecvValue < (numberOfProcess - 1))
 		{
-				MPI_Recv(buffToRecv, 3, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-				matrix[buffToRecv[1]][buffToRecv[2]] = buffToRecv[0];
-				++nbOfRecvValue;
+			MPI_Recv(buffToRecv, 3, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+			matrix[buffToRecv[1]][buffToRecv[2]] = buffToRecv[0];
+			++nbOfRecvValue;
 		}
 	
 		printMatrix(matrix);
@@ -49,7 +48,7 @@ void aggregateAndPrintValues(int currentValue, int i, int j)
 		executionTime = timeEnd - timeStart;
 		printf("Execution time: %f\n", executionTime);
 	}
-	else  //processeur considerer comme un client , va envoyer sa valeur de cellule au processeur serveur
+	else  //processeur consideré comme un client , va envoyer sa valeur de cellule au processeur serveur
 	{
 		int buffToSend[3];
 		buffToSend[0] = currentValue;
@@ -140,8 +139,6 @@ int main(int argc, char *argv[])
 	int initialValue = atoi(argv[2]);
 	int problem = atoi(argv[1]);
 	int nbIterations = atoi(argv[3]);
-	
-	//initalizeMatrix(initialValue, matrix);
 	
 	MPI_Init(&argc, &argv);
 
