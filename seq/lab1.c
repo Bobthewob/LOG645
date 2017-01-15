@@ -24,6 +24,7 @@ void initalizeMatrix(int p, int matrix[MATRIX_SIZE][MATRIX_SIZE])
 	{
 		for(int j = 0; j < MATRIX_SIZE; j++)
 		{
+			usleep(1000);
 			matrix[i][j] = p;
 		} 
 	}
@@ -93,12 +94,12 @@ int main(int argc, char *argv[])
 	
     if (problem == 1)
 	{
-		printf("Execution du premier probleme\n");
+		//printf("Execution du premier probleme\n");
 		problemeUn(matrix, nbIterations, 1);
 	}
 	else
 	{
-		printf("Execution du deuxieme probleme\n");
+		//printf("Execution du deuxieme probleme\n");
 		problemeDeux(matrix, nbIterations, 1);
 	} 
 	

@@ -7,6 +7,8 @@
 #define MATRIX_SIZE 8
 
 int err, numberOfProcess, processRank;
+double timeStart, timeEnd, executionTime;
+struct timeval tp;
 
 void printMatrix(int matrix[MATRIX_SIZE][MATRIX_SIZE])
 {
@@ -19,30 +21,111 @@ void printMatrix(int matrix[MATRIX_SIZE][MATRIX_SIZE])
 		
 		printf("\n");
 	} 
-} 
+}
 
-void initalizeMatrix(int p, int matrix[MATRIX_SIZE][MATRIX_SIZE])
+void aggregateAndPrintValues(int currentValue, int i, int j)
 {
-	for(int i = 0; i < MATRIX_SIZE; i++)
+	if(processRank == 0) //processeur considerer comme le serveur , va recevoir les donnees des autres processeurs et creer la matrice
 	{
-		for(int j = 0; j < MATRIX_SIZE; j++)
+		
+		int buffToRecv[3];
+		int matrix[MATRIX_SIZE][MATRIX_SIZE];
+		int nbOfRecvValue = 0;
+		MPI_Status status;
+
+		matrix[0][0] = currentValue;
+
+		while(nbOfRecvValue < (numberOfProcess - 1))
 		{
-			matrix[i][j] = p;
-		} 
+				MPI_Recv(buffToRecv, 3, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+				matrix[buffToRecv[1]][buffToRecv[2]] = buffToRecv[0];
+				++nbOfRecvValue;
+		}
+	
+		printMatrix(matrix);
+
+		gettimeofday(&tp, NULL);
+		timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+		executionTime = timeEnd - timeStart;
+		printf("Execution time: %f\n", executionTime);
+	}
+	else  //processeur considerer comme un client , va envoyer sa valeur de cellule au processeur serveur
+	{
+		int buffToSend[3];
+		buffToSend[0] = currentValue;
+		buffToSend[1] = i;
+		buffToSend[2] = j;
+
+		MPI_Send(buffToSend , 3, MPI_INT, 0, 0, MPI_COMM_WORLD);
+	}
+		
+}
+
+void problemeUn(int oldValue, int nbIterations, int k, int i, int j)
+{
+	int currentValue;
+
+	usleep(1000);
+	currentValue = oldValue + (i + j) * k;			
+	
+	if (k < nbIterations)
+	{
+		problemeUn(currentValue, nbIterations, ++k, i, j);
+	} 	
+	else
+	{
+		aggregateAndPrintValues(currentValue, i, j);
 	}
 }
 
-void problemeUn(int matrix[MATRIX_SIZE][MATRIX_SIZE], int nbIterations)
-{
-	if (processRank == 0)
+void problemeDeux(int oldValue, int nbIterations, int k, int i, int j)
+{	
+	int currentValue;
+
+	if(j == 0) 
 	{
-		matrix[0][0] = nbIterations;
-		
-		printMatrix(matrix);
+		usleep(1000);
+		currentValue = oldValue + (i * k);
+
+		int buffToSend[1];
+		buffToSend[0] = currentValue;
+
+		MPI_Send(buffToSend , 1, MPI_INT, processRank + MATRIX_SIZE, 0, MPI_COMM_WORLD);
+
+	}
+	else if((j > 0) && (j < 7)) 
+	{
+		int buffToRecv[1];
+		MPI_Status status;
+	
+		MPI_Recv(buffToRecv, 1, MPI_INT, processRank - MATRIX_SIZE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+		usleep(1000);
+		currentValue = oldValue + (buffToRecv[0] * k);
+
+		int buffToSend[1];
+		buffToSend[0] = currentValue;
+
+		MPI_Send(buffToSend , 1, MPI_INT, processRank + MATRIX_SIZE, 0, MPI_COMM_WORLD);
 	}
 	else
 	{
+		int buffToRecv[1];
+		MPI_Status status;
+	
+		MPI_Recv(buffToRecv, 1, MPI_INT, processRank - MATRIX_SIZE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
+		usleep(1000);
+		currentValue = oldValue + (buffToRecv[0] * k);
+	}
+	
+	if (k < nbIterations)
+	{
+		problemeDeux(currentValue, nbIterations, ++k, i, j);
+	} 	
+	else
+	{
+		aggregateAndPrintValues(currentValue, i, j);
 	}
 }
 
@@ -57,11 +140,10 @@ int main(int argc, char *argv[])
 	int initialValue = atoi(argv[2]);
 	int problem = atoi(argv[1]);
 	int nbIterations = atoi(argv[3]);
-	int matrix[MATRIX_SIZE][MATRIX_SIZE];
-
-	initalizeMatrix(initialValue, matrix);
 	
-	err = MPI_Init(&argc, &argv);
+	//initalizeMatrix(initialValue, matrix);
+	
+	MPI_Init(&argc, &argv);
 
 	if (err != MPI_SUCCESS)
 	{
@@ -73,30 +155,21 @@ int main(int argc, char *argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &processRank);
 
 	//Tiré de l'exemple du site du cours pour le minuteur
-	double timeStart, timeEnd, executionTime;
-	struct timeval tp;
-	gettimeofday(&tp, NULL); 
-	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+	if(processRank == 0)
+	{
+		gettimeofday(&tp, NULL); 
+		timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+	}
 
 	if (problem == 1)
 	{
-		problemeUn(matrix, nbIterations);
+		problemeUn(initialValue, nbIterations, 1, processRank % 8, processRank / 8);
 	}
 	else
 	{
-		printf("Execution du deuxieme probleme\n");
+		problemeDeux(initialValue, nbIterations, 1, processRank % 8, processRank / 8);
 	} 
 
-	gettimeofday(&tp, NULL);
-	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
-	executionTime = timeEnd - timeStart;
-	
-	if (processRank == 0)
-	{
-		printf("Execution time: %f\n", executionTime);
-	}
-
-	err = MPI_Finalize();
-	
+	MPI_Finalize();
     return 0;
 } 
