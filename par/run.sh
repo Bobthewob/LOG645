@@ -1,1 +1,1 @@
-mpirun -np $1 lab1 $2 $3 $4
+mpirun -np 64 lab1 $1 $2 $3
