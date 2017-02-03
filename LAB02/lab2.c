@@ -5,6 +5,8 @@
 #include <omp.h>
 
 #define MATRIX_SIZE 10
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 void initalizeMatrix(int p, int matrix[MATRIX_SIZE][MATRIX_SIZE])
 {
@@ -70,7 +72,7 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 
 	//Partie parallel
-	#pragma omp parallel for schedule(dynamic)
+	#pragma omp parallel for schedule(dynamic) 
 	for(int i = 0; i < (MATRIX_SIZE * MATRIX_SIZE); i++)
 	{
 		int y = i % MATRIX_SIZE;
@@ -81,7 +83,7 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 			usleep(5000);
 			matrix[y][x] += y + x;	
 		}	
-	} 
+	}
 
 	gettimeofday(&tp, NULL);
 	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
@@ -96,10 +98,20 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 {
 	double timeStart, timeEnd, executionTime;
 	struct timeval tp;
-	int matrix[MATRIX_SIZE][MATRIX_SIZE];
+	int matrix[nombreIterations][MATRIX_SIZE][MATRIX_SIZE];
 
-	initalizeMatrix(valeurInitiale, matrix);
-
+	//initalizeMatrix(valeurInitiale, matrix);
+	for (int k = 0; k <= nombreIterations; k++)
+	{
+		for(int i = 0; i < MATRIX_SIZE; i++)
+		{
+			for(int j = 0; j < MATRIX_SIZE; j++)
+			{
+				matrix[k][i][j] = valeurInitiale;
+			} 
+		}
+	}
+	
 	//Tiré de l'exemple du site du cours pour le minuteur
 	gettimeofday(&tp, NULL); 
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
@@ -115,11 +127,11 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 
 				if(j == MATRIX_SIZE - 1)
 				{
-					matrix[i][j] += i;
+					matrix[k][i][j] = matrix[k - 1][i][j] + i;
 				}
 				else
 				{
-					matrix[i][j] += matrix[i][j + 1];	
+					matrix[k][i][j] = matrix[k - 1][i][j] + matrix[k][i][j + 1];	
 				}
 			} 
 		}
@@ -130,20 +142,44 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	executionTime = timeEnd - timeStart;
 
 	printf("%s\n", "Sequentielle");
-	printMatrix(matrix);
-	printf("Execution time: %f\n", executionTime);
+	//printMatrix(matrix);
+	
+	printf("%s\n", "-----------------------------------------------------------------");
+	for(int i = 0; i < MATRIX_SIZE; i++) 
+	{
+		for(int j = 0; j < MATRIX_SIZE; j++) 
+		{
+			printf("%d ", matrix[nombreIterations][i][j]);
+		}
+		
+		printf("\n");
+	} 
+	printf("%s\n", "-----------------------------------------------------------------");
 
-	initalizeMatrix(valeurInitiale, matrix);
+	printf("Execution time: %f\n", executionTime);
+	
+	//initalizeMatrix(valeurInitiale, matrix);	
+	for (int k = 0; k <= nombreIterations; k++)
+	{
+		for(int i = 0; i < MATRIX_SIZE; i++)
+		{
+			for(int j = 0; j < MATRIX_SIZE; j++)
+			{
+				matrix[k][i][j] = valeurInitiale;
+			} 
+		}
+	}
 
 	//Tiré de l'exemple du site du cours pour le minuteur
 	gettimeofday(&tp, NULL); 
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 	
-	//Partie parallele
+	//Partie parallele test 1
 	for (int k = 1; k <= nombreIterations; k++)
-	{
+	{	
+		//#pragma omp parallel for collapse(2) 
 		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
-		{	
+		{
 			#pragma omp parallel for
 			for(int i = 0; i < MATRIX_SIZE; i++)
 			{
@@ -151,22 +187,85 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 
 				if(j == MATRIX_SIZE - 1)
 				{	
-					matrix[i][j] += i;
+					matrix[k][i][j] = matrix[k - 1][i][j] + i;
 				}
 				else
 				{
-					matrix[i][j] += matrix[i][j + 1];	
+					matrix[k][i][j] = matrix[k - 1][i][j] + matrix[k][i][j + 1];	
 				}
 			} 
 		}
 	}
+
+	//Partie parallele test 2
+	/*for (int k = 1; k <= nombreIterations; k++)
+	{	
+		//#pragma omp parallel for collapse(2) 
+		for(int j = MATRIX_SIZE - 1 - k; j >= 0 - k; j--)
+		{		
+			#pragma omp parallel for
+			for(int i = 0; i < MATRIX_SIZE; i++)
+			{
+				usleep(5000);
+
+				if(j == MATRIX_SIZE - 1)
+				{	
+					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + i;
+				}
+				else
+				{
+					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + matrix[k][i][j + k + 1];	
+				}
+			} 
+		}
+	}*/
+
+	//Partie parallele test 3
+	/*for(int j = MATRIX_SIZE - 2; j >= -nombreIterations; j--)
+	{
+			
+		int ma = MAX(1, j);
+		int mi = MIN(-nombreIterations, j + MATRIX_SIZE + 1);
+
+		#pragma omp parallel for collapse(2) 	
+		for (int k = 1; k <= nombreIterations; k++) 
+		{	
+			
+			for(int i = 0; i < MATRIX_SIZE; i++)
+			{
+				usleep(5000);
+
+				if(j == MATRIX_SIZE - 1)
+				{	
+					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + i;
+				}
+				else
+				{
+					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + matrix[k][i][j + k + 1];	
+				}
+			} 
+		}
+	}*/
 
 	gettimeofday(&tp, NULL);
 	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 	executionTime = timeEnd - timeStart;
 
 	printf("%s\n", "Parallele");
-	printMatrix(matrix);
+	//printMatrix(matrix);
+	
+	printf("%s\n", "-----------------------------------------------------------------");
+	for(int i = 0; i < MATRIX_SIZE; i++) 
+	{
+		for(int j = 0; j < MATRIX_SIZE; j++) 
+		{
+			printf("%d ", matrix[nombreIterations][i][j]);
+		}
+		
+		printf("\n");
+	} 
+	printf("%s\n", "-----------------------------------------------------------------");
+
 	printf("Execution time: %f\n", executionTime);
 }
 
