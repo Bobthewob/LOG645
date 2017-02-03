@@ -50,10 +50,10 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 		{
 			for(int j = 0; j < MATRIX_SIZE; j++)
 			{
-				//usleep(50000); JE SAIS PAS POURQUOI IL MARCHE PAS
+				usleep(5000);
 				matrix[i][j] += i + j;			
 			} 
-		} 
+		}
 	}
 
 	gettimeofday(&tp, NULL);
@@ -61,6 +61,33 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 	executionTime = timeEnd - timeStart;
 
 	printf("%s\n", "Sequentielle");
+	printMatrix(matrix);
+	printf("Execution time: %f\n", executionTime);
+
+	initalizeMatrix(valeurInitiale, matrix);
+
+	gettimeofday(&tp, NULL); 
+	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+
+	//Partie parallel
+	#pragma omp parallel for ordered num_threads(64) schedule(dynamic)
+	for(int i = 0; i < (MATRIX_SIZE * MATRIX_SIZE); i++)
+	{
+		int y = i % MATRIX_SIZE;
+		int x = i / MATRIX_SIZE;
+		
+		for (int k = 1; k <= nombreIterations; k++)
+		{
+			usleep(5000);
+			matrix[y][x] += y + x;	
+		}	
+	} 
+
+	gettimeofday(&tp, NULL);
+	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+	executionTime = timeEnd - timeStart;
+
+	printf("%s\n", "parallel");
 	printMatrix(matrix);
 	printf("Execution time: %f\n", executionTime);
 }
@@ -83,7 +110,7 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 		{
 			for(int j = 0; j < MATRIX_SIZE; j++)
 			{
-				//usleep(50000); JE SAIS PAS POURQUOI IL MARCHE PAS
+				usleep(50000);
 				if (j == 9)
 				{
 					matrix[i][0] += i;
