@@ -70,7 +70,7 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 
 	//Partie parallel
-	#pragma omp parallel for ordered num_threads(64) schedule(dynamic)
+	#pragma omp parallel for schedule(dynamic)
 	for(int i = 0; i < (MATRIX_SIZE * MATRIX_SIZE); i++)
 	{
 		int y = i % MATRIX_SIZE;
@@ -96,7 +96,8 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 {
 	double timeStart, timeEnd, executionTime;
 	struct timeval tp;
-	int matrix[MATRIX_SIZE][MATRIX_SIZE];	
+	int matrix[MATRIX_SIZE][MATRIX_SIZE];
+
 	initalizeMatrix(valeurInitiale, matrix);
 
 	//Tiré de l'exemple du site du cours pour le minuteur
@@ -105,20 +106,21 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	
 	//Partie séquentielle
 	for (int k = 1; k <= nombreIterations; k++)
-	{	
-		for(int i = 0; i < MATRIX_SIZE; i++)
-		{
-			for(int j = 0; j < MATRIX_SIZE; j++)
+	{
+		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
+		{	
+			for(int i = 0; i < MATRIX_SIZE; i++)
 			{
-				usleep(50000);
-				if (j == 9)
+				usleep(5000);
+
+				if(j == MATRIX_SIZE - 1)
 				{
-					matrix[i][0] += i;
-				} 
+					matrix[i][j] += i;
+				}
 				else
 				{
 					matrix[i][j] += matrix[i][j + 1];	
-				} 
+				}
 			} 
 		}
 	}
@@ -128,6 +130,42 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	executionTime = timeEnd - timeStart;
 
 	printf("%s\n", "Sequentielle");
+	printMatrix(matrix);
+	printf("Execution time: %f\n", executionTime);
+
+	initalizeMatrix(valeurInitiale, matrix);
+
+	//Tiré de l'exemple du site du cours pour le minuteur
+	gettimeofday(&tp, NULL); 
+	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+	
+	//Partie parallele
+	for (int k = 1; k <= nombreIterations; k++)
+	{
+		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
+		{	
+			#pragma omp parallel for
+			for(int i = 0; i < MATRIX_SIZE; i++)
+			{
+				usleep(5000);
+
+				if(j == MATRIX_SIZE - 1)
+				{	
+					matrix[i][j] += i;
+				}
+				else
+				{
+					matrix[i][j] += matrix[i][j + 1];	
+				}
+			} 
+		}
+	}
+
+	gettimeofday(&tp, NULL);
+	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+	executionTime = timeEnd - timeStart;
+
+	printf("%s\n", "Parallele");
 	printMatrix(matrix);
 	printf("Execution time: %f\n", executionTime);
 }

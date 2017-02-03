@@ -1,5 +1,5 @@
 all:
-	gcc -std=c99 -fopenmp -olab2 lab2.c
+	gcc -std=gnu99 -fopenmp -olab2 lab2.c
 run:
 	./lab2
 clean:
