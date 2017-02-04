@@ -100,19 +100,9 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 {
 	double timeStart, timeEnd, executionTimeSeq, executionTimePar, acceleration;
 	struct timeval tp;
-	int matrix[nombreIterations][MATRIX_SIZE][MATRIX_SIZE];
+	int matrix[MATRIX_SIZE][MATRIX_SIZE];
 
-	//initalizeMatrix(valeurInitiale, matrix);
-	for (int k = 0; k <= nombreIterations; k++)
-	{
-		for(int i = 0; i < MATRIX_SIZE; i++)
-		{
-			for(int j = 0; j < MATRIX_SIZE; j++)
-			{
-				matrix[k][i][j] = valeurInitiale;
-			} 
-		}
-	}
+	initalizeMatrix(valeurInitiale, matrix);
 	
 	//Tiré de l'exemple du site du cours pour le minuteur
 	gettimeofday(&tp, NULL); 
@@ -129,11 +119,11 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 
 				if(j == MATRIX_SIZE - 1)
 				{
-					matrix[k][i][j] = matrix[k - 1][i][j] + i;
+					matrix[i][j] += i;
 				}
 				else
 				{
-					matrix[k][i][j] = matrix[k - 1][i][j] + matrix[k][i][j + 1];	
+					matrix[i][j] += matrix[i][j + 1];	
 				}
 			} 
 		}
@@ -144,110 +134,37 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	executionTimeSeq = timeEnd - timeStart;
 
 	printf("%s\n", "Sequentielle");
-	//printMatrix(matrix);
-	
-	printf("%s\n", "-----------------------------------------------------------------");
-	for(int i = 0; i < MATRIX_SIZE; i++) 
-	{
-		for(int j = 0; j < MATRIX_SIZE; j++) 
-		{
-			printf("%d ", matrix[nombreIterations][i][j]);
-		}
-		
-		printf("\n");
-	} 
-	printf("%s\n", "-----------------------------------------------------------------");    //pourquoi t'utilises pas les méthodes déclarées en haut????
+	printMatrix(matrix);
 
 	printf("Execution time: %f\n", executionTimeSeq);
 	
-	//initalizeMatrix(valeurInitiale, matrix);	
-	for (int k = 0; k <= nombreIterations; k++)
-	{
-		for(int i = 0; i < MATRIX_SIZE; i++)
-		{
-			for(int j = 0; j < MATRIX_SIZE; j++)
-			{
-				matrix[k][i][j] = valeurInitiale;
-			} 
-		}
-	}
+	initalizeMatrix(valeurInitiale, matrix);	
 
 	//Tiré de l'exemple du site du cours pour le minuteur
 	gettimeofday(&tp, NULL); 
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 	
-	//Partie parallele test 1
+	//Partie parallele
 	for (int k = 1; k <= nombreIterations; k++)
-	{	
-		//#pragma omp parallel for collapse(2) 
-		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
-		{
-			#pragma omp parallel for
-			for(int i = 0; i < MATRIX_SIZE; i++)
-			{
-				usleep(5000);
-
-				if(j == MATRIX_SIZE - 1)
-				{	
-					matrix[k][i][j] = matrix[k - 1][i][j] + i;
-				}
-				else
-				{
-					matrix[k][i][j] = matrix[k - 1][i][j] + matrix[k][i][j + 1];	
-				}
-			} 
-		}
-	}
-
-	//Partie parallele test 2
-	/*for (int k = 1; k <= nombreIterations; k++)
-	{	
-		//#pragma omp parallel for collapse(2) 
-		for(int j = MATRIX_SIZE - 1 - k; j >= 0 - k; j--)
-		{		
-			#pragma omp parallel for
-			for(int i = 0; i < MATRIX_SIZE; i++)
-			{
-				usleep(5000);
-
-				if(j == MATRIX_SIZE - 1)
-				{	
-					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + i;
-				}
-				else
-				{
-					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + matrix[k][i][j + k + 1];	
-				}
-			} 
-		}
-	}*/
-
-	//Partie parallele test 3
-	/*for(int j = MATRIX_SIZE - 2; j >= -nombreIterations; j--)
 	{
-			
-		int ma = MAX(1, j);
-		int mi = MIN(-nombreIterations, j + MATRIX_SIZE + 1);
-
-		#pragma omp parallel for collapse(2) 	
-		for (int k = 1; k <= nombreIterations; k++) 
-		{	
-			
-			for(int i = 0; i < MATRIX_SIZE; i++)
-			{
-				usleep(5000);
-
-				if(j == MATRIX_SIZE - 1)
-				{	
-					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + i;
-				}
-				else
-				{
-					matrix[k][i][j + k] = matrix[k - 1][i][j + k] + matrix[k][i][j + k + 1];	
-				}
-			} 
-		}
-	}*/
+ 		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
+ 		{	
+ 			#pragma omp parallel for schedule(dynamic)
+ 			for(int i = 0; i < MATRIX_SIZE; i++)
+ 			{
+ 				usleep(5000);
+ 
+ 				if(j == MATRIX_SIZE - 1)
+ 				{	
+ 					matrix[i][j] += i;
+ 				}
+ 				else
+ 				{
+ 					matrix[i][j] += matrix[i][j + 1];	
+ 				}
+ 			} 
+ 		}
+ 	}
 
 	gettimeofday(&tp, NULL);
 	timeEnd = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
@@ -255,19 +172,7 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	acceleration = executionTimeSeq / executionTimePar;
 
 	printf("%s\n", "Parallele");
-	//printMatrix(matrix);
-	
-	printf("%s\n", "-----------------------------------------------------------------");
-	for(int i = 0; i < MATRIX_SIZE; i++) 
-	{
-		for(int j = 0; j < MATRIX_SIZE; j++) 
-		{
-			printf("%d ", matrix[nombreIterations][i][j]);
-		}
-		
-		printf("\n");
-	} 
-	printf("%s\n", "-----------------------------------------------------------------");
+	printMatrix(matrix);
 
 	printf("Execution time: %f\n", executionTimePar);
 	printf("Acceleration: %f\n", acceleration);
