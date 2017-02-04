@@ -115,7 +115,7 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 		{	
 			for(int i = 0; i < MATRIX_SIZE; i++)
 			{
-				usleep(5000);
+				usleep(50000);
 
 				if(j == MATRIX_SIZE - 1)
 				{
@@ -143,16 +143,16 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	//Tiré de l'exemple du site du cours pour le minuteur
 	gettimeofday(&tp, NULL); 
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
-	
+
 	//Partie parallele
 	for (int k = 1; k <= nombreIterations; k++)
 	{
  		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
  		{	
- 			#pragma omp parallel for schedule(dynamic)
+ 			#pragma omp parallel for ordered num_threads(10) schedule(dynamic)
  			for(int i = 0; i < MATRIX_SIZE; i++)
  			{
- 				usleep(5000);
+ 				usleep(50000);
  
  				if(j == MATRIX_SIZE - 1)
  				{	
