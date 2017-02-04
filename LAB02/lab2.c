@@ -72,13 +72,13 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 	timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 
 	//Partie parallel
-	#pragma omp parallel for schedule(dynamic) 
-	for(int i = 0; i < (MATRIX_SIZE * MATRIX_SIZE); i++)
+	for (int k = 1; k <= nombreIterations; k++)
 	{
 		int y = i % MATRIX_SIZE;
 		int x = i / MATRIX_SIZE;
 		
-		for (int k = 1; k <= nombreIterations; k++)
+		#pragma omp parallel for schedule(dynamic) 
+		for(int i = 0; i < (MATRIX_SIZE * MATRIX_SIZE); i++)
 		{
 			usleep(50000);
 			matrix[y][x] += y + x;	
