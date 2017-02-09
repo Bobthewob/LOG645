@@ -5,8 +5,6 @@
 #include <omp.h>
 
 #define MATRIX_SIZE 10
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 void initalizeMatrix(int p, int matrix[MATRIX_SIZE][MATRIX_SIZE])
 {
@@ -73,13 +71,12 @@ void problemeUn(int valeurInitiale, int nombreIterations)
 
 	//Partie parallel
 	for (int k = 1; k <= nombreIterations; k++)
-	{
-		int y = i % MATRIX_SIZE;
-		int x = i / MATRIX_SIZE;
-		
+	{		
 		#pragma omp parallel for schedule(dynamic) 
 		for(int i = 0; i < (MATRIX_SIZE * MATRIX_SIZE); i++)
 		{
+			int y = i % MATRIX_SIZE;
+			int x = i / MATRIX_SIZE;
 			usleep(50000);
 			matrix[y][x] += y + x;	
 		}	
@@ -149,7 +146,7 @@ void problemeDeux(int valeurInitiale, int nombreIterations)
 	{
  		for(int j = MATRIX_SIZE - 1; j >= 0; j--)
  		{	
- 			#pragma omp parallel for ordered num_threads(10) schedule(dynamic)
+ 			#pragma omp parallel for ordered schedule(dynamic)
  			for(int i = 0; i < MATRIX_SIZE; i++)
  			{
  				usleep(50000);
