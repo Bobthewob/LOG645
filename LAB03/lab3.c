@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
 			{
 				for(int j = 0; j < (m - 1); j++)
 				{	
-					double tmp = (td/(h * h));
 					usleep(5);
 					matrix[i][j][k + 1] = (1.0 - 4*td/h*h) * matrix[i][j][k] + 
 										  (td/h*h) * (matrix[i - 1][j][k] + matrix[i + 1][j][k] + matrix[i][j - 1][k] + matrix[i][j + 1][k]);
