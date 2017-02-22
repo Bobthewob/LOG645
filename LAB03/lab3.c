@@ -8,14 +8,14 @@ int err, numberOfProcess, processRank, m, n, np, nbproc;
 double timeStart, timeEnd, executionTime, td, h;
 struct timeval tp;
 
-void printMatrix(double matrix[n][m][np], int iteration)
+void printMatrix(double matrix[np][n][m], int iteration)
 {
 	printf("%s\n", "-----------------------------------------------------------------");
 	for(int i = 0; i < n; i++) 
 	{
 		for(int j = 0; j < m; j++) 
 		{
-			printf("%lf ", matrix[i][j][iteration]);
+			printf("%lf ", matrix[iteration][i][j]);
 		}
 		
 		printf("\n");
@@ -23,7 +23,7 @@ void printMatrix(double matrix[n][m][np], int iteration)
 	printf("%s\n", "-----------------------------------------------------------------");
 }
 
-void initMatrix(double matrix[n][m][np])
+void initMatrix(double matrix[np][n][m])
 {
 	for (int k = 0; k < np; k++)
 	{
@@ -31,7 +31,7 @@ void initMatrix(double matrix[n][m][np])
 	    {
 	        for (int j = 0; j < m; j++)
 	        {
-	            matrix[i][j][k] = 0.0;
+	            matrix[k][i][j] = 0.0;
 	        }
 	    }
 	}
@@ -62,18 +62,19 @@ int main(int argc, char *argv[])
 	nbproc = atoi(argv[6]); // le nombre de processus a utiliser
 
 	MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcess);
-	MPI_Comm_rank(MPI_COMM_WORLD, &processRank);
-
-	double matrix[n][m][np];
-	initMatrix(matrix);
+	MPI_Comm_rank(MPI_COMM_WORLD, &processRank);	
 	
 	if(processRank == 0)
 	{
+		double matrix[np][n][m];	
+
+		initMatrix(matrix);
+
 		for(int i = 0; i < n; i++)
 		{
 			for(int j = 0; j < m; j++)
 			{
-				matrix[i][j][0] = i * (n - i - 1) * j * (m - j - 1);
+				matrix[0][i][j] = i * (n - i - 1) * j * (m - j - 1);
 			} 
 		}		
 
@@ -82,16 +83,20 @@ int main(int argc, char *argv[])
 
 		gettimeofday(&tp, NULL); 
 		timeStart = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
+		int comp = 0;
 
-		for(int k = 0; k < np; k++)
+		for(int k = 0; k < (np - 1); k++)
 		{
-			for(int i = 0; i < (n - 1); i++)
+			for(int i = 1; i < (n - 1); i++)
 			{
-				for(int j = 0; j < (m - 1); j++)
+
+				for(int j = 1; j < (m - 1); j++)
 				{	
+					comp++;
+
 					usleep(5);
-					matrix[i][j][k + 1] = (1.0 - 4*td/h*h) * matrix[i][j][k] + 
-										  (td/h*h) * (matrix[i - 1][j][k] + matrix[i + 1][j][k] + matrix[i][j - 1][k] + matrix[i][j + 1][k]);
+					matrix[k + 1][i][j] = (1.0 - 4.0*td/(h*h)) * matrix[k][i][j] + 
+										  (td/(h*h)) * (matrix[k][i - 1][j] + matrix[k][i + 1][j] + matrix[k][i][j - 1] + matrix[k][i][j + 1]);
 				}
 			}
 		}
@@ -101,7 +106,7 @@ int main(int argc, char *argv[])
 		executionTime = timeEnd - timeStart;
 
 		printf("%s\n", "Sequentielle");
-		printMatrix(matrix, np);
+		printMatrix(matrix, np - 1);
 		printf("Execution time: %f\n", executionTime);
 	}
 
