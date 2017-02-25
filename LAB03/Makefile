@@ -9,7 +9,7 @@ lab3.o: lab3.c
 	$(CC) $(CFLAGS) -c lab3.c
 
 lab3 : lab3.o
-	$(CC) $(LFLAGS) lab3.o -o lab3
+	$(CC) $(LFLAGS) lab3.o -o lab3 -lm
 
 run:
 	mpirun --hostfile hostfile -np 24 lab3
