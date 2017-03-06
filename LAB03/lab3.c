@@ -6,7 +6,7 @@
 #include "mpi.h"
 
 int err, numberOfProcess, processRank, m, n, np, nbproc;
-double timeStart1, timeStart2, timeEnd1, timeEnd2, executionTime1, executionTime2;
+double timeStart1, timeStart2, timeEnd1, timeEnd2, executionTimeSeq, executionTimePar;
 float td, h;
 struct timeval tp;
 
@@ -69,7 +69,6 @@ int main(int argc, char *argv[])
 	//---------------------SEQUENTIELLE----------------------------------------------------------------------
 	if(processRank == 0)
 	{
-		printf("alloha\n");
 		float oldMatrix[n][m];	
 		float newMatrix[n][m];
 
@@ -116,11 +115,10 @@ int main(int argc, char *argv[])
 
 		gettimeofday(&tp, NULL);
 		timeEnd1 = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
-		executionTime1 = timeEnd1 - timeStart1;
+		executionTimeSeq = timeEnd1 - timeStart1;
 
 		printf("%s\n", "Sequentielle");
 		printMatrix(newMatrix);
-		printf("Execution time Sequentielle: %f\n", executionTime1);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);	
@@ -598,14 +596,14 @@ int main(int argc, char *argv[])
 
 		gettimeofday(&tp, NULL);
 		timeEnd2 = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
-		executionTime2 = timeEnd2 - timeStart2;
+		executionTimePar = timeEnd2 - timeStart2;
 
 		printf("%s\n", "Parallele");
 		printf("%s\n", "-----------------------------------------------------------------");
 
-		for (int i = 0; i < n; i++)
+		for (int i = 0; i < m; i++)
 		{
-			printf("XXXXXXXX ");
+			printf("0.00 ");
 		}
 
 		printf("\n");
@@ -613,7 +611,7 @@ int main(int argc, char *argv[])
 		for(int i = 0; i < realN; i++) 
 		{
 			
-			printf("XXXXXXXX ");
+			printf("0.00 ");
 
 			for(int j = 0; j < realM; j++) 
 			{
@@ -621,19 +619,21 @@ int main(int argc, char *argv[])
 				printf("%.2f ", newMatrix[i][j]);
 			}
 			
-			printf("XXXXXXXX ");
+			printf("0.00 ");
 
 			printf("\n");
 		} 
 
-		for (int i = 0; i < n; ++i)
+		for (int i = 0; i < m; ++i)
 		{
-			printf("XXXXXXXX ");
+			printf("0.00 ");
 		}
 
+		printf("\n");
 		printf("%s\n", "-----------------------------------------------------------------");
-		printf("Execution time parallele : %f\n", executionTime2);
-		printf("Execution time Sequentielle: %f\n", executionTime1);
+		printf("Execution time Sequentielle: %f\n", executionTimeSeq);
+		printf("Execution time parallele : %f\n", executionTimePar);
+		printf("Acceleration : %f\n", executionTimeSeq / executionTimePar);
 	}
 	else if(activeProcess == 1)
 	{
