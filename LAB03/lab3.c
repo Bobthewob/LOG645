@@ -7,7 +7,7 @@
 
 int err, numberOfProcess, processRank, m, n, np, nbproc;
 double timeStart1, timeStart2, timeEnd1, timeEnd2, executionTimeSeq, executionTimePar;
-float td, h;
+double td, h;
 struct timeval tp;
 
 void printMatrix(float matrix[n][m])
@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 
 	int realN = n - 2; // we dont want to do any process on the false cells (the cells always equal to 0)
 	int realM = m - 2;
+	double tdh = td / (h*h);
 
 	MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcess);
 	MPI_Comm_rank(MPI_COMM_WORLD, &processRank);	
@@ -90,17 +91,14 @@ int main(int argc, char *argv[])
 		gettimeofday(&tp, NULL); 
 		timeStart1 = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 
-		for(int k = 0; k < (np - 1); k++)
+		for(int k = 0; k <= (np - 1); k++)
 		{
 			for(int i = 1; i < (n - 1); i++)
 			{
-
 				for(int j = 1; j < (m - 1); j++)
 				{	
 					usleep(5);
-					newMatrix[i][j] = (1.0 - 4.0*td/(h*h)) * oldMatrix[i][j] + 
-										  (td/(h*h)) * (oldMatrix[i - 1][j] + oldMatrix[i + 1][j] + oldMatrix[i][j - 1] + oldMatrix[i][j + 1]);
-
+					newMatrix[i][j] = (1.0 - 4.0 * tdh) * (oldMatrix[i][j]) + tdh * (oldMatrix[i - 1][j] + oldMatrix[i + 1][j] + oldMatrix[i][j - 1] + oldMatrix[i][j + 1]); 
 				}
 			}
 
@@ -158,98 +156,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/*int dimSize1 = (int) sqrt((double) nbCellPerProcessor);
-	int dimSize2 = dimSize1;
-	int currNbOfCell;
-	
-	do 
-	{
-		dimSize2++;
-		currNbOfCell = dimSize1 * dimSize2;
-	}while(currNbOfCell <= nbCellPerProcessor);
-
-	dimSize2--;	
-
-	int iOffset = 0;
-	int jOffset = 0;
-	int currp = 0;
-
-	if( (dimSize1 < realN) && (dimSize2 < realM) && (nbCellPerProcessor >= 4))
-	{
-		while((iOffset + dimSize1) <= realN)
-		{
-			jOffset = 0;
-			while((jOffset + dimSize2) <= realM)
-			{
-
-				for (int i = iOffset; i < (iOffset + dimSize1); i++)
-				{
-					for (int j = jOffset; j < (jOffset + dimSize2); j++)
-					{
-						mappingMatrix[i][j] = currp;
-					}
-				}
-				currp++;
-				jOffset = jOffset + dimSize2;
-			}
-			iOffset = iOffset + dimSize1;
-		}
-
-		int startIndexI = realN - (realN % dimSize1);
-		int startIndexJ = realM - (realM % dimSize2);
-		int count = 0;
-
-		for (int i = startIndexI; i < realN; ++i)
-		{
-			for (int j = 0; j < realM; j++)
-			{
-				if(count >= nbCellPerProcessor)
-				{
-					count = 0;
-					currp++;
-				}
-
-				mappingMatrix[i][j] = currp;
-				count++;
-			}
-		}
-
-		for (int i = 0; i < startIndexI; ++i)
-		{
-			for (int j = startIndexJ; j < realM; j++)
-			{
-				if(count >= nbCellPerProcessor)
-				{
-					count = 0;
-					currp++;
-				}
-
-				mappingMatrix[i][j] = currp;
-				count++;
-			}
-		}
-	}
-	else
-	{
-		int currentProc = 0;
-		int i = 0;
-
-		while((i + nbCellPerProcessor) <= numberOfCells)
-		{	
-			for (int j = 0; j < nbCellPerProcessor; ++j)
-			{
-				mappingMatrix[i / realM][i % realM] = currentProc;
-				++i;
-			}
-			++currentProc;
-		}	
-
-		for (int j = 0; j < ((int) numberOfCells - i); ++j)
-		{
-			mappingMatrix[(i + j) / realM][(i + j) % realM] = currentProc;
-		}
-	}*/
-
 	int currentProc = 0;
 	int i = 0;
 	
@@ -287,41 +193,6 @@ int main(int argc, char *argv[])
 			mappingMatrix[(i + j) % realN][(i + j) / realN] = currentProc;
 		}
 	}
-	
-	/*if(processRank == 0) //processeur consideré comme le serveur , va recevoir les données des autres processeurs et créer la matrice
-	{
-		printf("%s\n", "-----------------------------------------------------------------");
-
-		for (int i = 0; i < n; i++)
-		{
-			printf("XXXXXXXX ");
-		}
-
-		printf("\n");
-
-		for(int i = 0; i < realN; i++) 
-		{
-			
-			printf("XXXXXXXX ");
-
-			for(int j = 0; j < realM; j++) 
-			{
-
-				printf("%d ", mappingMatrix[i][j]);
-			}
-			
-			printf("XXXXXXXX ");
-
-			printf("\n");
-		} 
-
-		for (int i = 0; i < n; ++i)
-		{
-			printf("XXXXXXXX ");
-		}
-
-		printf("%s\n", "-----------------------------------------------------------------");
-	}*/
 
 	MPI_Barrier(MPI_COMM_WORLD);	
 
@@ -366,7 +237,7 @@ int main(int argc, char *argv[])
 				oldMatrix[i][j] = (i + 1) * (n - i - 2) * (j + 1) * (m - j - 2);
 				newMatrix[i][j] = (i + 1) * (n - i - 2) * (j + 1) * (m - j - 2);
 
-				if(np > 1)
+				if(np >= 1)
 				{
 					float buffToSend1[3];
 					buffToSend1[0] = newMatrix[i][j];
@@ -401,7 +272,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		for(int k = 0; k < (np - 1); k++)
+		for(int k = 0; k <= (np - 1); k++)
 		{
 			int msgToReceiv = 0;
 
@@ -511,10 +382,10 @@ int main(int argc, char *argv[])
 					}
 
 					usleep(5);
-					newMatrix[i][j] = (1.0 - 4.0*td/(h*h)) * oldMatrix[i][j] + 
-										  (td/(h*h)) * (val1 + val2 + val3 + val4);
+					newMatrix[i][j] = (1.0 - 4.0 * tdh) * oldMatrix[i][j] + 
+										  tdh * (val1 + val2 + val3 + val4);
 
-				  	if(k + 1 < (np - 1))
+				  	if(k + 1 <= (np - 1))
 					{
 						float buffToSend1[3];
 						buffToSend1[0] = newMatrix[i][j];
@@ -559,7 +430,7 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		for(int k = 0; k < (np - 1); k++)
+		for(int k = 0; k <= (np - 1); k++)
 		{
 			MPI_Barrier(MPI_COMM_WORLD);
 		}
