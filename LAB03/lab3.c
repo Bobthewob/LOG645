@@ -10,7 +10,7 @@ double timeStart1, timeStart2, timeEnd1, timeEnd2, executionTimeSeq, executionTi
 double td, h;
 struct timeval tp;
 
-void printMatrix(float matrix[n][m])
+void printMatrix(double matrix[n][m])
 {
 	printf("%s\n", "-----------------------------------------------------------------");
 	for(int i = 0; i < n; i++) 
@@ -25,7 +25,7 @@ void printMatrix(float matrix[n][m])
 	printf("%s\n", "-----------------------------------------------------------------");
 }
 
-void initMatrix(float matrix[n][m])
+void initMatrix(double matrix[n][m])
 {	
     for (int i = 0; i < n; i++)
     {
@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
 	//---------------------SEQUENTIELLE----------------------------------------------------------------------
 	if(processRank == 0)
 	{
-		float oldMatrix[n][m];	
-		float newMatrix[n][m];
+		double oldMatrix[n][m];	
+		double newMatrix[n][m];
 
 		initMatrix(oldMatrix);
 		initMatrix(newMatrix);
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 	 	timeStart2 = (double) (tp.tv_sec) + (double) (tp.tv_usec) / 1e6;
 	}
 
-	float numberOfCells = (realN*realM);
+	double numberOfCells = (realN*realM);
 	int nbCellPerProcessor;
 
 	if((numberOfCells / nbproc) == (((int) numberOfCells) / nbproc))
@@ -143,8 +143,8 @@ int main(int argc, char *argv[])
 		nbCellPerProcessor = 1;
 
 	int mappingMatrix[realN][realM];
-	float oldMatrix[realN][realM];	
-	float newMatrix[realN][realM];	
+	double oldMatrix[realN][realM];	
+	double newMatrix[realN][realM];	
 
 	for (int i = 0; i < realN; i++)
 	{
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 
 				if(np >= 1)
 				{
-					float buffToSend1[3];
+					double buffToSend1[3];
 					buffToSend1[0] = newMatrix[i][j];
 					buffToSend1[1] = i;
 					buffToSend1[2] = j;
@@ -248,25 +248,25 @@ int main(int argc, char *argv[])
 					if((i - 1) >= 0)
 					{
 						if(mappingMatrix[i - 1][j] != processRank)
-							MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i - 1][j], 0, MPI_COMM_WORLD);
+							MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i - 1][j], 0, MPI_COMM_WORLD);
 					}
 
 					if((j - 1) >= 0)
 					{
 						if(mappingMatrix[i][j - 1] != processRank)
-							MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i][j - 1], 0, MPI_COMM_WORLD);
+							MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i][j - 1], 0, MPI_COMM_WORLD);
 					}
 
 					if((i + 1) < realN)
 					{
 						if(mappingMatrix[i + 1][j] != processRank)
-							MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i + 1][j], 0, MPI_COMM_WORLD);
+							MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i + 1][j], 0, MPI_COMM_WORLD);
 					}
 
 					if((j + 1) < realM)
 					{
 						if(mappingMatrix[i][j + 1] != processRank)
-							MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i][j + 1], 0, MPI_COMM_WORLD);
+							MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i][j + 1], 0, MPI_COMM_WORLD);
 					}
 				}
 			}
@@ -321,11 +321,11 @@ int main(int argc, char *argv[])
 
 			while(msgReceiv < msgToReceiv)
 			{
-				float buffToRecv1[3];
+				double buffToRecv1[3];
 						
 				MPI_Status status1;
 
-				MPI_Recv(&buffToRecv1, 3, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status1);
+				MPI_Recv(&buffToRecv1, 3, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status1);
 				oldMatrix[(int) buffToRecv1[1]][(int) buffToRecv1[2]] = buffToRecv1[0]; 
 
 				msgReceiv++;
@@ -340,10 +340,10 @@ int main(int argc, char *argv[])
 					int i = ProcessI[index];
 					int j = ProcessJ[index];
 
-					float val1;
-					float val2;
-					float val3;
-					float val4;
+					double val1;
+					double val2;
+					double val3;
+					double val4;
 
 					if((i - 1) >= 0)
 					{
@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 
 				  	if(k + 1 <= (np - 1))
 					{
-						float buffToSend1[3];
+						double buffToSend1[3];
 						buffToSend1[0] = newMatrix[i][j];
 						buffToSend1[1] = i;
 						buffToSend1[2] = j;
@@ -395,25 +395,25 @@ int main(int argc, char *argv[])
 						if((i - 1) >= 0)
 						{
 							if(mappingMatrix[i - 1][j] != processRank)
-								MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i - 1][j], 0, MPI_COMM_WORLD);
+								MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i - 1][j], 0, MPI_COMM_WORLD);
 						}
 
 						if((j - 1) >= 0)
 						{
 							if(mappingMatrix[i][j - 1] != processRank)
-								MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i][j - 1], 0, MPI_COMM_WORLD);
+								MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i][j - 1], 0, MPI_COMM_WORLD);
 						}
 
 						if((i + 1) < realN)
 						{
 							if(mappingMatrix[i + 1][j] != processRank)
-								MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i + 1][j], 0, MPI_COMM_WORLD);
+								MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i + 1][j], 0, MPI_COMM_WORLD);
 						}
 
 						if((j + 1) < realM)
 						{
 							if(mappingMatrix[i][j + 1] != processRank)
-								MPI_Send(&buffToSend1 , 3, MPI_FLOAT, mappingMatrix[i][j + 1], 0, MPI_COMM_WORLD);
+								MPI_Send(&buffToSend1 , 3, MPI_DOUBLE, mappingMatrix[i][j + 1], 0, MPI_COMM_WORLD);
 						}
 					}
 				}
@@ -456,10 +456,10 @@ int main(int argc, char *argv[])
 
 		while(msgReceiv < msgToReceiv)
 		{
-			float buffToRecv1[3];
+			double buffToRecv1[3];
 			MPI_Status status1;
 
-			MPI_Recv(buffToRecv1, 3, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status1);
+			MPI_Recv(buffToRecv1, 3, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status1);
 			newMatrix[(int) buffToRecv1[1]][(int) buffToRecv1[2]] = buffToRecv1[0]; 
 
 			msgReceiv++;
@@ -515,12 +515,12 @@ int main(int argc, char *argv[])
 				if(mappingMatrix[i][j] == processRank) // si on est sur le processeur assigne a cette cellule
 				{
 					
-					float buffToSend[3];
+					double buffToSend[3];
 					buffToSend[0] = newMatrix[i][j];
 					buffToSend[1] = i;
 					buffToSend[2] = j;
 
-					MPI_Send(buffToSend , 3, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+					MPI_Send(buffToSend , 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 				}
 			}
 		}
