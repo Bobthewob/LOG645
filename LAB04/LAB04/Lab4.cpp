@@ -4,11 +4,28 @@
 #include <math.h>
 #include <stdlib.h>
 #include <CL/cl.h>
-//#include <winbase.h>
+#include <windows.h>
 
-//using namespace std
+double PCFreq = 0.0;
+__int64 CounterStart = 0;
 
-#define MAX_SOURCE_SIZE (0x100000)
+//inspire de http://stackoverflow.com/questions/1739259/how-to-use-queryperformancecounter
+void StartCounter()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceFrequency(&li);
+
+	PCFreq = double(li.QuadPart) / 1000.0;
+
+	QueryPerformanceCounter(&li);
+	CounterStart = li.QuadPart;
+}
+double GetCounter()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	return double(li.QuadPart - CounterStart) / PCFreq;
+}
 
 char* oclLoadProgSource(const char* cFilename, const char* cPreamble, size_t*szFinalLength)
 {
@@ -101,7 +118,7 @@ int err, m, n, np, nbproc;
 double timeStart1, timeStart2, timeEnd1, timeEnd2, executionTimeSeq, executionTimePar;
 double td, h;
 unsigned long tp;
-
+time_t t1, t2;
 
 int main(int argc, char *argv[])
 {
@@ -119,61 +136,80 @@ int main(int argc, char *argv[])
 	td = atof(argv[4]); //le temps discretise
 	h = atof(argv[5]); //la taille d'un cote d'une subdivision
 	float tdh = td / (h*h);
+	szLocalWorkSize = 256;
+	szGlobalWorkSize = m * n;  // rounded up to the nearest multiple of the LocalWorkSize
 
 	#define M  m;
 	#define N  n;
 
 	//---------------------SEQUENTIELLE----------------------------------------------------------------------
+	void *oldMatrix, *newMatrix;
 
-	float oldMatrix[300][300];
-	float newMatrix[300][300];
+	oldMatrix = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
+	newMatrix = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
 
 	for (int i = 0; i < n; i++)
 	{
 		for (int j = 0; j < m; j++)
 		{
-			oldMatrix[i][j] = i * (n - i - 1) * j * (m - j - 1);
-			newMatrix[i][j] = i * (n - i - 1) * j * (m - j - 1);
+			((float*)oldMatrix)[i + (j * n)] = i * (n - i - 1) * j * (m - j - 1);
+			((float*)newMatrix)[i + (j * n)] = i * (n - i - 1) * j * (m - j - 1);
 		}
 	}
 
-	printf("%s\n", "Matrice après initialisation");
+	printf("%s\n", "Matrice apres initialisation");
 
 	for (int i = 0; i < n; i++)
 	{
 		for (int j = 0; j < m; j++)
 		{
-			printf("%.2f ", newMatrix[i][j]);
+			printf("%.2f ", ((float*)oldMatrix)[i + (j * n)]);
 		}
 		printf("\r\n");
 	}
 
-	//tp = GetTickCount();
-	timeStart1 = tp / 1e6;
+	StartCounter();
 
 	for (int k = 0; k <= (np - 1); k++)
 	{
-		for (int i = 1; i < (n - 1); i++)
+		for (int i = 0; i < szGlobalWorkSize; i++)
 		{
-			for (int j = 1; j < (m - 1); j++)
+			if (i >= (m*n))
 			{
-				//usleep(5);
-				newMatrix[i][j] = (1.0 - 4.0 * tdh) * (oldMatrix[i][j]) + tdh * (oldMatrix[i - 1][j] + oldMatrix[i + 1][j] + oldMatrix[i][j - 1] + oldMatrix[i][j + 1]);
+				((float*)newMatrix)[i] = 0;
+				continue;
 			}
+			if ((i % n) <= 0)
+			{
+				((float*)newMatrix)[i] = 0;
+				continue;
+			}
+			if ((i / n) <= 0)
+			{
+				((float*)newMatrix)[i] = 0;
+				continue;
+			}
+			if ((i % n) >= (n - 1))
+			{
+				((float*)newMatrix)[i] = 0;
+				continue;
+			}
+			if ((i / n) >= (m - 1))
+			{
+				((float*)newMatrix)[i] = 0;
+				continue;
+			}
+
+			((float*)newMatrix)[i] = (1.0f - 4.0f * tdh) * ((float*)oldMatrix)[i] + tdh *
+				(((float*)oldMatrix)[i - 1] + ((float*)oldMatrix)[i + 1] + ((float*)oldMatrix)[i - n] + ((float*)oldMatrix)[i + n]);
+
+			
 		}
 
-		for (int i = 1; i < (n - 1); i++)
-		{
-			for (int j = 1; j < (m - 1); j++)
-			{
-				oldMatrix[i][j] = newMatrix[i][j];
-			}
-		}
+		memmove(oldMatrix, newMatrix, sizeof(float) * szGlobalWorkSize);
 	}
 
-	//tp = GetTickCount();
-	timeEnd1 = tp / 1e6;
-	executionTimeSeq = timeEnd1 - timeStart1;
+	executionTimeSeq = GetCounter();
 
 	printf("%s\n", "Sequentielle");
 
@@ -181,17 +217,13 @@ int main(int argc, char *argv[])
 	{
 		for (int j = 0; j < m; j++)
 		{
-			printf("%.2f ", newMatrix[i][j]);
+			printf("%.2f ", ((float*)newMatrix)[i + (j * n)]);
 		}
 		printf("\r\n");
 	}
 	printf("\r\n");
 
 	//-------------------------------------------PARALLELE-----------------------------------------------------------------
-
-	szLocalWorkSize = 256;
-	szGlobalWorkSize = m * n;  // rounded up to the nearest multiple of the LocalWorkSize
-
 							   // Allocate and initialize host arrays 
 	srcA = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
 	srcB = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
@@ -308,27 +340,37 @@ int main(int argc, char *argv[])
 		getchar();
 	}
 
-	// Asynchronous write of data to GPU device
-	ciErr1 = clEnqueueWriteBuffer(cqCommandQueue, buffA, CL_FALSE, 0, sizeof(cl_float) * szGlobalWorkSize, srcA, 0, NULL, NULL);
-	ciErr1 |= clEnqueueWriteBuffer(cqCommandQueue, buffB, CL_FALSE, 0, sizeof(cl_float) * szGlobalWorkSize, srcB, 0, NULL, NULL);
-
-	if (ciErr1 != CL_SUCCESS)
+	StartCounter();
+	
+	for (int k = 0; k <= (np - 1); k++)
 	{
-		printf("Error in clEnqueueWriteBuffer, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
+
+		// Asynchronous write of data to GPU device
+		ciErr1 = clEnqueueWriteBuffer(cqCommandQueue, buffA, CL_FALSE, 0, sizeof(cl_float) * szGlobalWorkSize, srcA, 0, NULL, NULL);
+		ciErr1 |= clEnqueueWriteBuffer(cqCommandQueue, buffB, CL_FALSE, 0, sizeof(cl_float) * szGlobalWorkSize, srcB, 0, NULL, NULL);
+
+		if (ciErr1 != CL_SUCCESS)
+		{
+			printf("Error in clEnqueueWriteBuffer, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
+		}
+
+		// Launch kernel
+		ciErr1 = clEnqueueNDRangeKernel(cqCommandQueue, ckKernel, 1, NULL, &szGlobalWorkSize, NULL, 0, NULL, NULL);
+
+		if (ciErr1 != CL_SUCCESS)
+		{
+			int maxGlobSize = CL_DEVICE_MAX_WORK_GROUP_SIZE;
+			printf("Error in clEnqueueNDRangeKernel, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
+			getchar();
+		}
+
+		// Synchronous/blocking read of results, and check accumulated errors
+		ciErr1 = clEnqueueReadBuffer(cqCommandQueue, buffB, CL_TRUE, 0, sizeof(cl_float) * szGlobalWorkSize, srcB, 0, NULL, NULL);
+
+		srcA = srcB;
 	}
-
-	// Launch kernel
-	ciErr1 = clEnqueueNDRangeKernel(cqCommandQueue, ckKernel, 1, NULL, &szGlobalWorkSize, NULL, 0, NULL, NULL);
-
-	if (ciErr1 != CL_SUCCESS)
-	{
-		int maxGlobSize = CL_DEVICE_MAX_WORK_GROUP_SIZE;
-		printf("Error in clEnqueueNDRangeKernel, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-		getchar();
-	}
-
-	// Synchronous/blocking read of results, and check accumulated errors
-	ciErr1 = clEnqueueReadBuffer(cqCommandQueue, buffB, CL_TRUE, 0, sizeof(cl_float) * szGlobalWorkSize, srcB, 0, NULL, NULL);
+	
+	executionTimePar = GetCounter();
 
 	if (ciErr1 != CL_SUCCESS)
 	{
@@ -347,11 +389,9 @@ int main(int argc, char *argv[])
 		printf("\r\n");
 	}
 
-	float sup = ((float*)srcB)[1 + n];
-	float sup1 = newMatrix[1][1];
-
-	printf("%.2f \r\n", sup);
-	printf("%.2f \r\n", sup1);
+	printf("temps sequentiel : %.8f \r\n", executionTimeSeq / 1000);
+	printf("temps parallele : %.8f \r\n", executionTimePar / 1000);
+	printf("acceleration : %.8f \r\n", executionTimeSeq / executionTimePar);
 
 	getchar();
 
